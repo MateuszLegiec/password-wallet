@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PASSWORD WALLET</title>
+</head>
+<body>
+<script src="functions.js"></script>
+<form id="signUpForm">
+
+    <div>
+        <label for="username">Username:</label>
+        <br/>
+        <input type="text" id="username" name="username">
+    </div>
+
+    <div>
+        <label for="password">Password:</label>
+        <br/>
+        <input type="password" id="password" name="password" minlength="8" required>
+    </div>
+
+    <div>
+        <label for="hash">Hash function:</label>
+        <br/>
+        <select id="hash" name="hash" required>
+            <option value="hmac">hmac</option>
+            <option value="sha512">sha512</option>
+        </select>
+    </div>
+
+    <input type="button" value="Sign up"
+           onclick="register(form['username'].value, form['password'].value, form['hash'].value)">
+    <div>
+        <a href="index.html">Already have an account?</a>
+    </div>
+
+</form>
+
+</body>
+</html>

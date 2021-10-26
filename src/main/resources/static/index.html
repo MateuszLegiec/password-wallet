@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PASSWORD WALLET</title>
+</head>
+<body>
+<script src="functions.js"></script>
+<form id="singInForm">
+
+    <div>
+        <label for="username">Username:</label>
+        <br/>
+        <input type="text" id="username" name="username">
+    </div>
+
+    <div>
+        <label for="password">Password:</label>
+        <br/>
+        <input type="password" id="password" name="password" required>
+    </div>
+
+    <input type="button" value="Sign in" onclick="login('Basic ' + btoa(form['username'].value + ':' + form['password'].value), false)">
+
+    <div>
+        <a href="registration.html">Do not have an account yet?</a>
+    </div>
+
+</form>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PASSWORD WALLET</title>
+</head>
+<script src="functions.js"></script>
+<body>
+
+<button onclick="logout()">Sign out</button>
+
+<form style="margin-top: 20px">
+
+    <div>
+        <label for="oldPassword">Password:</label>
+        <br/>
+        <input type="text" id="oldPassword" name="oldPassword">
+    </div>
+
+    <div>
+        <label for="newPassword">New password:</label>
+        <br/>
+        <input type="password" id="newPassword" name="newPassword" minlength="8" required>
+    </div>
+
+    <input type="button" value="Change password" onclick="changePassword(form['oldPassword'].value, form['newPassword'].value)">
+
+</form>
+
+
+<div style="margin-top: 20px">
+
+    <form>
+
+        <div>
+            <label for="webAddress">Web address:</label>
+            <br/>
+            <input type="text" id="webAddress" name="webAddress">
+        </div>
+
+        <div>
+            <label for="webAddressUsername">Username:</label>
+            <br/>
+            <input type="text" id="webAddressUsername" name="webAddressUsername">
+        </div>
+
+        <div>
+            <label for="webAddressPassword">Password:</label>
+            <br/>
+            <input type="password" id="webAddressPassword" name="webAddressPassword" required>
+        </div>
+
+        <input type="button" value="Put wallet item" onclick="putWalletItem(form['webAddress'].value, form['webAddressUsername'].value, form['webAddressPassword'].value)">
+
+    </form>
+
+    <h4>Wallet items:</h4>
+    <div id="walletItems">
+        <span>address:</span>
+        <span>username:</span>
+        <span>password:</span>
+    </div>
+
+</div>
+<script>
+    getWalletItems()
+</script>
+
+</body>
+</html>
