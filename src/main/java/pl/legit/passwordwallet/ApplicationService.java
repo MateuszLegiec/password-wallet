@@ -17,12 +17,9 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Logger;
 
 @Service
 record ApplicationService(SecurityStrategy sha512Strategy, SecurityStrategy hmacStrategy, WalletItemsRepository walletItemsRepository, UsersRepository usersRepository) {
-
-    private final static Logger log = Logger.getLogger(ApplicationService.class.getSimpleName());
 
     public void authenticate(String username, String password) {
         usersRepository.findByUsername(username)
