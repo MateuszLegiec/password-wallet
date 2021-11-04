@@ -2,16 +2,13 @@ package pl.legit.passwordwallet;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import pl.legit.passwordwallet.users.UsersService;
+import pl.legit.passwordwallet.walletItems.WalletItemsService;
+
 import java.util.List;
 
 @RestController
-public class ApplicationController {
-
-    private final ApplicationService applicationService;
-
-    ApplicationController(ApplicationService applicationService) {
-        this.applicationService = applicationService;
-    }
+public record ApplicationController (UsersService usersService, WalletItemsService walletItemsService) {
 
     @GetMapping("/login")
     public ResponseEntity<Void> greeting() {
@@ -20,27 +17,27 @@ public class ApplicationController {
 
     @PostMapping("/register")
     public void register(@RequestBody RegistrationCommand registrationCommand) {
-        applicationService.register(registrationCommand.getUsername(), registrationCommand.getPassword(), registrationCommand.getHashFunction());
+        usersService.register(registrationCommand.getUsername(), registrationCommand.getPassword(), registrationCommand.getHashFunction());
     }
 
     @PostMapping("/{username}/change-password")
     public void changePassword(@PathVariable String username, @RequestBody ChangePasswordCommand changePasswordCommand) {
-        applicationService.changePassword(username, changePasswordCommand.getOldPassword(), changePasswordCommand.getNewPassword());
+        usersService.changePassword(username, changePasswordCommand.getOldPassword(), changePasswordCommand.getNewPassword());
     }
 
     @GetMapping("/{username}/wallet-items")
-    public List<WalletItem> getWalletPasswords(@PathVariable String username) {
-        return applicationService.getWalletItems(username);
+    public List<WalletItemQuery> getWalletPasswords(@PathVariable String username) {
+        return walletItemsService.getWalletItems(username);
     }
 
     @GetMapping("/{username}/wallet-items/{webAddress}/password")
     public String decryptWalletPassword(@PathVariable String username, @PathVariable String webAddress, @RequestHeader("Authorization") String authorizationToken) {
-        return applicationService.decryptWalletItemPassword(username, webAddress, SecurityUtils.decodeToken(authorizationToken).getPassword());
+        return walletItemsService.decryptWalletItemPassword(username, webAddress, SecurityUtils.decodeToken(authorizationToken).getPassword());
     }
 
     @PutMapping("/{username}/wallet-items/{webAddress}")
     public void putWalletItem(@PathVariable String username, @PathVariable String webAddress, @RequestBody PutWalletItemCommand credentials, @RequestHeader("Authorization") String authorizationToken) {
-        applicationService.putWalletItem(username, webAddress, credentials.getWebAddressUsername(), credentials.getWebAddressPassword(), SecurityUtils.decodeToken(authorizationToken).getPassword());
+        walletItemsService.putWalletItem(username, webAddress, credentials.getWebAddressUsername(), credentials.getWebAddressPassword(), SecurityUtils.decodeToken(authorizationToken).getPassword());
     }
 
 }
@@ -124,3 +121,4 @@ class PutWalletItemCommand {
         this.webAddressPassword = webAddressPassword;
     }
 }
+

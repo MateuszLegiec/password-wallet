@@ -1,5 +1,5 @@
 package pl.legit.passwordwallet;
 
-enum HashFunction {
+public enum HashFunction {
     hmac, sha512
 }

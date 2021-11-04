@@ -8,6 +8,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import pl.legit.passwordwallet.users.UsersService;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -19,15 +20,15 @@ import java.util.Set;
 class SecurityConfig implements WebMvcConfigurer {
 
     @Autowired
-    ApplicationService applicationService;
+    UsersService usersService;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new SecurityInterceptor(applicationService));
+        registry.addInterceptor(new SecurityInterceptor(usersService));
     }
 }
 
-record SecurityInterceptor(ApplicationService applicationService) implements HandlerInterceptor {
+record SecurityInterceptor(UsersService usersService) implements HandlerInterceptor {
 
     private final static Set<String> whiteList = Set.of(
             "/",
@@ -45,7 +46,7 @@ record SecurityInterceptor(ApplicationService applicationService) implements Han
         if (!whiteList.contains(request.getRequestURI())) {
             try {
                 final CredentialsDTO authorization = SecurityUtils.decodeToken(request.getHeader("Authorization"));
-                applicationService.authenticate(authorization.getUsername(), authorization.getPassword());
+                usersService.authenticate(authorization.getUsername(), authorization.getPassword());
             } catch (IllegalArgumentException | EmptyResultDataAccessException e){
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
             }

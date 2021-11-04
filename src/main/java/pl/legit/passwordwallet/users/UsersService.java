@@ -1,10 +1,16 @@
-package pl.legit.passwordwallet;
+package pl.legit.passwordwallet.users;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import pl.legit.passwordwallet.HashFunction;
+import pl.legit.passwordwallet.walletItems.WalletItemsService;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -15,11 +21,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Optional;
 
 @Service
-record ApplicationService(SecurityStrategy sha512Strategy, SecurityStrategy hmacStrategy, WalletItemsRepository walletItemsRepository, UsersRepository usersRepository) {
+public record UsersService(SecurityStrategy sha512Strategy, SecurityStrategy hmacStrategy, WalletItemsService walletItemsService, UsersRepository usersRepository) {
 
     public void authenticate(String username, String password) {
         usersRepository.findByUsername(username)
@@ -53,22 +58,6 @@ record ApplicationService(SecurityStrategy sha512Strategy, SecurityStrategy hmac
         );
     }
 
-    public List<WalletItem> getWalletItems(String username) {
-        return walletItemsRepository.findAllByUsername(username);
-    }
-
-    public void putWalletItem(String username, String webAddress, String webAddressUsername, String webAddressPassword, String userPassword) {
-        walletItemsRepository.saveWallet(
-                new WalletItem(username, webAddress, webAddressUsername, webAddressPassword, userPassword)
-        );
-    }
-
-    public String decryptWalletItemPassword(String username, String webAddress, String userPassword) {
-        return walletItemsRepository.findByUsernameAndWebService(username, webAddress)
-                .map(it -> it.getDecryptedWebAddressPassword(userPassword))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-    }
-
     private SecurityStrategy securityStrategy(HashFunction hashFunction) {
         return switch (hashFunction) {
             case hmac -> hmacStrategy;
@@ -81,11 +70,11 @@ record ApplicationService(SecurityStrategy sha512Strategy, SecurityStrategy hmac
 sealed abstract class SecurityStrategy permits SHA512Strategy, HMACStrategy {
 
     protected final UsersRepository usersRepository;
-    protected final WalletItemsRepository walletItemsRepository;
+    protected final WalletItemsService walletItemsService;
 
-    protected SecurityStrategy(UsersRepository usersRepository, WalletItemsRepository walletItemsRepository) {
+    protected SecurityStrategy(UsersRepository usersRepository, WalletItemsService walletItemsService) {
         this.usersRepository = usersRepository;
-        this.walletItemsRepository = walletItemsRepository;
+        this.walletItemsService = walletItemsService;
     }
 
     abstract User create(String username, String password);
@@ -95,21 +84,7 @@ sealed abstract class SecurityStrategy permits SHA512Strategy, HMACStrategy {
     void changePassword(String username, String oldPassword, String newPassword) {
         final var user = create(username, newPassword);
         usersRepository.saveUser(user);
-        AtomicBoolean errorOccurred = new AtomicBoolean(false);
-        final var walletItems = walletItemsRepository.findAllByUsername(username)
-                .stream().peek(it -> {
-                    try {
-                        it.setWebAddressPassword(oldPassword, newPassword);
-                    } catch (Exception e) {
-                        errorOccurred.set(true);
-                        e.printStackTrace();
-                    }
-                });
-        if (errorOccurred.get()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT);
-        } else {
-            walletItems.forEach(walletItemsRepository::saveWallet);
-        }
+        walletItemsService.updateWalletItems(username, oldPassword, newPassword);
     }
 }
 
@@ -118,8 +93,8 @@ final class SHA512Strategy extends SecurityStrategy {
 
     private final SaltGenerator saltGenerator;
 
-    SHA512Strategy(UsersRepository usersRepository, WalletItemsRepository walletItemsRepository, SaltGenerator saltGenerator) {
-        super(usersRepository, walletItemsRepository);
+    SHA512Strategy(UsersRepository usersRepository, WalletItemsService walletItemsService, SaltGenerator saltGenerator) {
+        super(usersRepository, walletItemsService);
         this.saltGenerator = saltGenerator;
     }
 
@@ -176,8 +151,8 @@ final class HMACStrategy extends SecurityStrategy {
     private final static String HMAC_SHA512 = "HmacSHA512";
     private final String hmacKey;
 
-    HMACStrategy(UsersRepository usersRepository, WalletItemsRepository walletItemsRepository, @Value("hmacKey") String hmacKey) {
-        super(usersRepository, walletItemsRepository);
+    HMACStrategy(UsersRepository usersRepository, WalletItemsService walletItemsService, @Value("hmacKey") String hmacKey) {
+        super(usersRepository, walletItemsService);
         this.hmacKey = hmacKey;
     }
 
@@ -214,4 +189,72 @@ final class HMACStrategy extends SecurityStrategy {
         return result;
     }
 
+}
+
+@Repository
+class UsersRepository {
+
+    private final static RowMapper<User> ROW_MAPPER = (row, num) -> new User(
+            row.getString("USERNAME"),
+            row.getString("PASSWORD_HASH"),
+            row.getBytes("SALT"),
+            HashFunction.valueOf(row.getString("HASH_FUNCTION"))
+    );
+
+    private final JdbcTemplate jdbcTemplate;
+
+    UsersRepository(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    Optional<User> findByUsername(String username) {
+        try {
+            return Optional.ofNullable(jdbcTemplate.queryForObject(
+                            "SELECT USERNAME, PASSWORD_HASH, SALT, HASH_FUNCTION FROM USERS WHERE USERNAME = ?",
+                            ROW_MAPPER,
+                            username
+                    )
+            );
+        } catch (EmptyResultDataAccessException e){
+            return Optional.empty();
+        }
+    }
+
+    void saveUser(User user) {
+        findByUsername(user.getUsername()).ifPresentOrElse(
+                it -> jdbcTemplate.update(
+                        "UPDATE USERS SET PASSWORD_HASH = ?, SALT = ?, HASH_FUNCTION =? WHERE USERNAME = ?",
+                        user.getPasswordHash(),
+                        user.getSalt(),
+                        user.getHash().name(),
+                        user.getUsername()
+                ),
+                () -> jdbcTemplate.update(
+                        "INSERT INTO USERS (USERNAME, PASSWORD_HASH, SALT, HASH_FUNCTION) VALUES (?, ?, ?, ?)",
+                        user.getUsername(),
+                        user.getPasswordHash(),
+                        user.getSalt(),
+                        user.getHash().name()
+                )
+        );
+    }
+
+}
+
+record User(String username, String passwordHash, byte[] salt, HashFunction hash) {
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public byte[] getSalt() {
+        return salt;
+    }
+
+    public HashFunction getHash() {
+        return hash;
+    }
 }
