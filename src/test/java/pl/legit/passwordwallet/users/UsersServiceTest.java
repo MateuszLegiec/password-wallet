@@ -2,8 +2,9 @@ package pl.legit.passwordwallet.users;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.web.server.ResponseStatusException;
 import pl.legit.passwordwallet.HashFunction;
 import pl.legit.passwordwallet.walletItems.WalletItemsService;
@@ -68,64 +69,33 @@ class UsersServiceTest {
         Assertions.assertThrows(ResponseStatusException.class, () -> usersService.register("username", "password", HashFunction.sha512));
     }
 
-    @Nested
-    class SHA512 {
-
-        @Test
-        void testAuthenticationWithInvalidCredentials() {
-            Assertions.assertThrows(ResponseStatusException.class, () -> usersService.authenticate("sha512_username", "invalid_password"));
-        }
-
-        @Test
-        void testAuthenticationWithValidCredentials() {
-            usersService.authenticate("sha512_username", "password");
-        }
-
-        @Test
-        void testRegistering() {
-            usersService.register("sha512_username_2", "password", HashFunction.hmac);
-
-            Assertions.assertTrue(usersRepository.findByUsername("sha512_username_2").isPresent());
-            Assertions.assertDoesNotThrow(() -> usersService.authenticate("sha512_username_2", "password"));
-        }
-
-        @Test
-        void testPasswordChange() {
-            usersService.changePassword("sha512_username", "password", "new_password");
-
-            Assertions.assertDoesNotThrow(() -> usersService.authenticate("sha512_username", "new_password"));
-        }
-
+    @ParameterizedTest
+    @ValueSource(strings = {"sha512_username", "hmac_username"})
+    void testAuthenticationWithValidCredentials(String username) {
+        usersService.authenticate(username, "password");
     }
 
-    @Nested
-    class HMAC {
+    @ParameterizedTest
+    @ValueSource(strings = {"sha512_username_2", "hmac_username_2"})
+    void testRegistering(String username) {
+        usersService.register(username, "password", HashFunction.hmac);
 
-        @Test
-        void testAuthenticationWithInvalidCredentials() {
-            Assertions.assertThrows(ResponseStatusException.class, () -> usersService.authenticate("hmac_username", "invalid_password"));
-        }
+        Assertions.assertTrue(usersRepository.findByUsername(username).isPresent());
+        Assertions.assertDoesNotThrow(() -> usersService.authenticate(username, "password"));
+    }
 
-        @Test
-        void testAuthenticationWithValidCredentials() {
-            Assertions.assertDoesNotThrow(() -> usersService.authenticate("hmac_username", "password"));
-        }
+    @ParameterizedTest
+    @ValueSource(strings = {"sha512_username", "hmac_username"})
+    void testAuthenticationWithInvalidCredentials(String username) {
+        Assertions.assertThrows(ResponseStatusException.class, () -> usersService.authenticate(username, "invalid_password"));
+    }
 
-        @Test
-        void testRegistering() {
-            usersService.register("hmac_username_2", "password", HashFunction.hmac);
+    @ParameterizedTest
+    @ValueSource(strings = {"sha512_username", "hmac_username"})
+    void testPasswordChange(String username) {
+        usersService.changePassword(username, "password", "new_password");
 
-            Assertions.assertTrue(usersRepository.findByUsername("hmac_username_2").isPresent());
-            Assertions.assertDoesNotThrow(() -> usersService.authenticate("hmac_username_2", "password"));
-        }
-
-        @Test
-        void testPasswordChange() {
-            usersService.changePassword("hmac_username", "password", "new_password");
-
-            Assertions.assertDoesNotThrow(() -> usersService.authenticate("hmac_username", "new_password"));
-        }
-
+        Assertions.assertDoesNotThrow(() -> usersService.authenticate(username, "new_password"));
     }
 
 }
