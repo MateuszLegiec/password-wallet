@@ -24,7 +24,13 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
-public record WalletItemsService (WalletItemsRepository walletItemsRepository) {
+public class WalletItemsService {
+
+    private final WalletItemsRepository walletItemsRepository;
+
+    public WalletItemsService(WalletItemsRepository walletItemsRepository) {
+        this.walletItemsRepository = walletItemsRepository;
+    }
 
     public List<WalletItemQuery> getWalletItems(String username) {
         return walletItemsRepository.findAllQueriesByUsername(username);
@@ -33,6 +39,12 @@ public record WalletItemsService (WalletItemsRepository walletItemsRepository) {
     public void putWalletItem(String username, String webAddress, String webAddressUsername, String webAddressPassword, String userPassword) {
         walletItemsRepository.saveWallet(
                 new WalletItem(username, webAddress, webAddressUsername, webAddressPassword, userPassword)
+        );
+    }
+
+    public void putWalletItem(String username, String webAddress, String webAddressUsername, String webAddressPassword) {
+        walletItemsRepository.saveWallet(
+                new WalletItem(username, webAddress, webAddressUsername, webAddressPassword)
         );
     }
 
@@ -56,7 +68,7 @@ public record WalletItemsService (WalletItemsRepository walletItemsRepository) {
         if (errorOccurred.get()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT);
         } else {
-            walletItems.forEach(it -> putWalletItem(it.getUsername(), it.getWebAddress(), it.getWebAddressUsername(), it.getWebAddressPassword(), newPassword));
+            walletItems.forEach(it -> putWalletItem(it.getUsername(), it.getWebAddress(), it.getWebAddressUsername(), it.getWebAddressPassword()));
         }
     }
 }
@@ -171,9 +183,9 @@ final class WalletItem {
     }
 
     public String getDecryptedWebAddressPassword(String password) {
-        final var oldKey = generateKey(password);
+        final var key = generateKey(password);
         try {
-            return decrypt(webAddressPassword, oldKey);
+            return decrypt(webAddressPassword, key);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY);
         }

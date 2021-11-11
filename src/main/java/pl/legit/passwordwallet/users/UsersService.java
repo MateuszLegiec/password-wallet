@@ -24,7 +24,17 @@ import java.util.Base64;
 import java.util.Optional;
 
 @Service
-public record UsersService(SecurityStrategy sha512Strategy, SecurityStrategy hmacStrategy, WalletItemsService walletItemsService, UsersRepository usersRepository) {
+public class UsersService {
+
+    private final SecurityStrategy sha512Strategy;
+    private final SecurityStrategy hmacStrategy;
+    private final UsersRepository usersRepository;
+
+    public UsersService(SecurityStrategy sha512Strategy, SecurityStrategy hmacStrategy, UsersRepository usersRepository) {
+        this.sha512Strategy = sha512Strategy;
+        this.hmacStrategy = hmacStrategy;
+        this.usersRepository = usersRepository;
+    }
 
     public void authenticate(String username, String password) {
         usersRepository.findByUsername(username)
