@@ -165,3 +165,72 @@ Password: <span style="cursor: pointer;" id="${it.webAddress}_password" onclick=
             .join('')
         )
 }
+
+function unlockIp(ip){
+    fetch(
+        `${BASE_URL}/blocked-ips/${ip}`,
+        {
+            headers: {
+                "Content-Type": "application/json; charset=UTF-8",
+                "Authorization": token()
+            },
+            method: "DELETE",
+        }
+    )
+        .then(data => {
+                if (data.ok) {
+                    getBlockedIps();
+                } else {
+                    console.error(data)
+                }
+            }
+        )
+}
+
+function getBlockedIps() {
+    fetch(
+        `${BASE_URL}/blocked-ips`,
+        {
+            headers: {
+                "Content-Type": "application/json; charset=UTF-8",
+                "Authorization": token()
+            },
+            method: "GET"
+        }
+    )
+        .then(res => res.json())
+        .then(data => document.getElementById('blockedIps').innerHTML = data
+            .map(
+                it => `
+<div>${it} <button id="${it}_button" onclick="unlockIp('${it}')">UNLOCK</button>
+</div>
+`)
+            .join('')
+        )
+}
+
+function getLoginAudits() {
+    fetch(
+        `${BASE_URL}/${username()}/login-audits`,
+        {
+            headers: {
+                "Content-Type": "application/json; charset=UTF-8",
+                "Authorization": token()
+            },
+            method: "GET"
+        }
+    )
+        .then(res => res.json())
+        .then(data => document.getElementById('loginAudits').innerHTML = data
+            .map(
+                it => `
+<div>
+ip: ${it.ipAddress}, 
+result: ${it.operationResult}, 
+date: ${it.creationDate}
+</div>
+`)
+            .join('')
+        )
+}
+

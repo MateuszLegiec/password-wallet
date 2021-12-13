@@ -8,6 +8,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import pl.legit.passwordwallet.loginAudit.LoginAuditFacade;
 import pl.legit.passwordwallet.users.UsersService;
 
 import javax.servlet.http.HttpServletRequest;
@@ -21,14 +22,16 @@ class SecurityConfig implements WebMvcConfigurer {
 
     @Autowired
     UsersService usersService;
+    @Autowired
+    LoginAuditFacade loginAuditFacade;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new SecurityInterceptor(usersService));
+        registry.addInterceptor(new SecurityInterceptor(usersService, loginAuditFacade));
     }
 }
 
-record SecurityInterceptor(UsersService usersService) implements HandlerInterceptor {
+record SecurityInterceptor(UsersService usersService, LoginAuditFacade loginAuditFacade) implements HandlerInterceptor {
 
     private final static Set<String> whiteList = Set.of(
             "/",
@@ -44,14 +47,25 @@ record SecurityInterceptor(UsersService usersService) implements HandlerIntercep
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         if (!whiteList.contains(request.getRequestURI())) {
+            final CredentialsDTO authorization = SecurityUtils.decodeToken(request.getHeader("Authorization"));
+            if (loginAuditFacade.isIpBlocked(request.getRemoteAddr()) || loginAuditFacade.isUserBlocked(authorization.getUsername())){
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+            }
             try {
-                final CredentialsDTO authorization = SecurityUtils.decodeToken(request.getHeader("Authorization"));
                 usersService.authenticate(authorization.getUsername(), authorization.getPassword());
-            } catch (IllegalArgumentException | EmptyResultDataAccessException e){
+                createAuditIfUriEqualsLogin(request.getRequestURI(), authorization.getUsername(), request.getRemoteAddr(), LoginAuditFacade.OperationResult.success);
+            } catch (IllegalArgumentException | EmptyResultDataAccessException | ResponseStatusException e){
+                createAuditIfUriEqualsLogin(request.getRequestURI(), authorization.getUsername(), request.getRemoteAddr(), LoginAuditFacade.OperationResult.failure);
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
             }
         }
         return HandlerInterceptor.super.preHandle(request, response, handler);
+    }
+
+    void createAuditIfUriEqualsLogin(String uri, String username, String remoteAddress, LoginAuditFacade.OperationResult operation){
+        if (uri.equals("/login")){
+            loginAuditFacade.create(username, remoteAddress, operation);
+        }
     }
 }
 

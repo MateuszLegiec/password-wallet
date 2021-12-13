@@ -2,13 +2,15 @@ package pl.legit.passwordwallet;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import pl.legit.passwordwallet.loginAudit.LoginAudit;
+import pl.legit.passwordwallet.loginAudit.LoginAuditFacade;
 import pl.legit.passwordwallet.users.UsersService;
 import pl.legit.passwordwallet.walletItems.WalletItemsService;
 
 import java.util.List;
 
 @RestController
-public record ApplicationController (UsersService usersService, WalletItemsService walletItemsService) {
+public record ApplicationController (UsersService usersService, WalletItemsService walletItemsService, LoginAuditFacade loginAuditFacade) {
 
     @GetMapping("/login")
     public ResponseEntity<Void> greeting() {
@@ -38,6 +40,21 @@ public record ApplicationController (UsersService usersService, WalletItemsServi
     @PutMapping("/{username}/wallet-items/{webAddress}")
     public void putWalletItem(@PathVariable String username, @PathVariable String webAddress, @RequestBody PutWalletItemCommand credentials, @RequestHeader("Authorization") String authorizationToken) {
         walletItemsService.putWalletItem(username, webAddress, credentials.getWebAddressUsername(), credentials.getWebAddressPassword(), SecurityUtils.decodeToken(authorizationToken).getPassword());
+    }
+
+    @GetMapping("/{username}/login-audits")
+    private List<LoginAudit> getLoginAudits(@PathVariable String username){
+        return loginAuditFacade.findAllByUsername(username);
+    }
+
+    @GetMapping("/blocked-ips")
+    private List<String> getBlockedIps(){
+        return loginAuditFacade.findAllBlockedIps();
+    }
+
+    @DeleteMapping("/blocked-ips/{ip}")
+    private void getBlockedIps(@PathVariable String ip){
+        loginAuditFacade.deleteBlockedIpById(ip);
     }
 
 }
