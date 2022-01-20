@@ -69,11 +69,31 @@
     <div id="blockedIps">
     </div>
 
+    <h4>You can observe:</h4>
+
+    <div id="subjects">
+    </div>
+
+    <h4>You can be observed by:</h4>
+    <div id="observers">
+    </div>
+
+    <form>
+        <div>
+            <label for="observer">Add account that will be able to observe you:</label>
+            <br/>
+            <input type="text" id="observer" name="webAddress">
+        </div>
+        <input type="button" value="Put observer" onclick="putObserver(form['observer'].value)">
+    </form>
+
 </div>
 <script>
     getWalletItems()
     getBlockedIps()
     getLoginAudits()
+    getSubjects()
+    getObservers()
 </script>
 
 </body>

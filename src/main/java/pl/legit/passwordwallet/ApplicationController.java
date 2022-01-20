@@ -6,11 +6,12 @@ import pl.legit.passwordwallet.loginAudit.LoginAudit;
 import pl.legit.passwordwallet.loginAudit.LoginAuditFacade;
 import pl.legit.passwordwallet.users.UsersService;
 import pl.legit.passwordwallet.walletItems.WalletItemsService;
+import pl.legit.passwordwallet.watchers.WatchersService;
 
 import java.util.List;
 
 @RestController
-public record ApplicationController (UsersService usersService, WalletItemsService walletItemsService, LoginAuditFacade loginAuditFacade) {
+public record ApplicationController (UsersService usersService, WalletItemsService walletItemsService, LoginAuditFacade loginAuditFacade, WatchersService watchersService) {
 
     @GetMapping("/login")
     public ResponseEntity<Void> greeting() {
@@ -43,18 +44,33 @@ public record ApplicationController (UsersService usersService, WalletItemsServi
     }
 
     @GetMapping("/{username}/login-audits")
-    private List<LoginAudit> getLoginAudits(@PathVariable String username){
+    private List<LoginAudit> getLoginAudits(@PathVariable String username) {
         return loginAuditFacade.findAllByUsername(username);
     }
 
     @GetMapping("/blocked-ips")
-    private List<String> getBlockedIps(){
+    private List<String> getBlockedIps() {
         return loginAuditFacade.findAllBlockedIps();
     }
 
     @DeleteMapping("/blocked-ips/{ip}")
-    private void getBlockedIps(@PathVariable String ip){
+    private void getBlockedIps(@PathVariable String ip) {
         loginAuditFacade.deleteBlockedIpById(ip);
+    }
+
+    @GetMapping("/{username}/subjects")
+    private List<String> getAllSubjects(@PathVariable String username) {
+        return watchersService.findAllSubjects(username);
+    }
+
+    @PutMapping("/{username}/observers/{observer}")
+    private void createObserver(@PathVariable String username, @PathVariable String observer) {
+        watchersService.create(username, observer);
+    }
+
+    @GetMapping("/{username}/observers")
+    private List<String> getAllObservers(@PathVariable String username) {
+        return watchersService.findAllObservers(username);
     }
 
 }

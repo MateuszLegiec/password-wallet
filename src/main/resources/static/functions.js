@@ -8,7 +8,17 @@ if (IS_USER_LOGGED_IN) {
 }
 
 function username() {
-    return atob(sessionStorage.getItem(PASSWORD_WALLET_TOKEN_NAME).substring(6)).split(':')[0];
+    if (window.location.href.startsWith('http://localhost:8080/subject-wallet.html')){
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        return urlParams.get('id')
+    } else {
+        return atob(sessionStorage.getItem(PASSWORD_WALLET_TOKEN_NAME).substring(6)).split(':')[0];
+    }
+}
+
+function backToWallet(){
+    location.href = 'http://localhost:8080/wallet.html'
 }
 
 function token() {
@@ -28,7 +38,7 @@ function login(token, displayAlert = false) {
     ).then(response => {
             if (response.ok) {
                 sessionStorage.setItem(PASSWORD_WALLET_TOKEN_NAME, token)
-                if (location.href !== 'http://localhost:8080/wallet.html') {
+                if (location.href !== 'http://localhost:8080/wallet.html' && !location.href.startsWith('http://localhost:8080/subject-wallet.html')) {
                     location.href = 'http://localhost:8080/wallet.html'
                 }
             } else {
@@ -231,6 +241,65 @@ date: ${it.creationDate}
 </div>
 `)
             .join('')
+        )
+}
+
+function getSubjects(){
+    fetch(
+        `${BASE_URL}/${username()}/subjects`,
+        {
+            headers: {
+                "Content-Type": "application/json; charset=UTF-8",
+                "Authorization": token()
+            },
+            method: "GET"
+        }
+    )
+        .then(it => it.json())
+        .then(data => document.getElementById('subjects').innerHTML = data
+            .map(it => `<a href="subject-wallet.html?id=${it}">${it}</a><br/>`)
+            .join('')
+        )
+}
+
+function getObservers(){
+    fetch(
+        `${BASE_URL}/${username()}/observers`,
+        {
+            headers: {
+                "Content-Type": "application/json; charset=UTF-8",
+                "Authorization": token()
+            },
+            method: "GET"
+        }
+    )
+        .then(res => res.json())
+        .then(
+            data =>
+                document.getElementById('observers').innerHTML = data
+                    .map(it => `<div>${it}</div>`)
+                    .join('')
+        )
+}
+
+function putObserver(subject){
+    fetch(
+        `${BASE_URL}/${username()}/observers/${subject}`,
+        {
+            headers: {
+                "Content-Type": "application/json; charset=UTF-8",
+                "Authorization": token()
+            },
+            method: "PUT"
+        }
+    )
+        .then(data => {
+                if (data.ok) {
+                    getObservers();
+                } else {
+                    console.error(data)
+                }
+            }
         )
 }
 

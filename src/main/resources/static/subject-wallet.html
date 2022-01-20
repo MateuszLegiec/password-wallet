@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PASSWORD WALLET</title>
+</head>
+<script src="functions.js"></script>
+<body>
+
+<button onclick="backToWallet()">Back</button>
+
+<div style="margin-top: 20px">
+
+    <h4>Wallet items:</h4>
+    <div id="walletItems">
+        <span>address:</span>
+        <span>username:</span>
+        <span>password:</span>
+    </div>
+
+    <h4>Login audits:</h4>
+    <div id="loginAudits">
+    </div>
+
+    <h4>Blocked ips:</h4>
+    <div id="blockedIps">
+    </div>
+
+    <h4>Your observers:</h4>
+
+    <div id="observers">
+    </div>
+
+    <h4>Your subjects:</h4>
+    <div id="subjects">
+    </div>
+
+</div>
+<script>
+    getWalletItems()
+    getBlockedIps()
+    getLoginAudits()
+    getSubjects()
+    getObservers()
+</script>
+
+</body>
+</html>

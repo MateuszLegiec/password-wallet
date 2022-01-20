@@ -75,6 +75,9 @@ public class UsersService {
         };
     }
 
+    public boolean existsByUsername(String username) {
+        return usersRepository.findByUsername(username).isPresent();
+    }
 }
 
 sealed abstract class SecurityStrategy permits SHA512Strategy, HMACStrategy {

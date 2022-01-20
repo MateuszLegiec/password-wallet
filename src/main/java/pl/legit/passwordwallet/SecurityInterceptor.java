@@ -41,7 +41,8 @@ record SecurityInterceptor(UsersService usersService, LoginAuditFacade loginAudi
             "/favicon.ico",
             "/error",
             "/register",
-            "/wallet.html"
+            "/wallet.html",
+            "/subject-wallet.html"
     );
 
     @Override
